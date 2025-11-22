@@ -1,23 +1,22 @@
 
 import React, { useState, useMemo } from 'react';
 import { TodoItem, StudyPhase } from '../types';
-import { Plus, CheckCircle2, Circle, Trash2, Calendar, Filter, ListTodo, Copy, Check, ArrowRight, History, X } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, Calendar, Filter, ListTodo, Copy, X, History } from 'lucide-react';
 
 interface TodoListProps {
   todos: TodoItem[];
   setTodos: (todos: TodoItem[]) => void;
   currentPhase: StudyPhase;
-  isWidget?: boolean; // true for Dashboard
+  isWidget?: boolean;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhase, isWidget = false }) => {
   const [newTodo, setNewTodo] = useState('');
   const [filterPhase, setFilterPhase] = useState<string>('all');
-  const [filterDate, setFilterDate] = useState<string>(''); // Date filter state
+  const [filterDate, setFilterDate] = useState<string>('');
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // --- Handlers ---
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodo.trim()) return;
@@ -38,64 +37,44 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
   };
 
   const deleteTodo = (id: string) => {
-    if (confirm('确定删除这条任务吗？')) {
       setTodos(todos.filter(t => t.id !== id));
-    }
   };
 
-  // Copy all tasks from a specific past date to today
   const copyScheduleToToday = (sourceDate: string, tasks: TodoItem[]) => {
     if (tasks.length === 0) return;
-    if (!confirm(`确定要将 ${sourceDate} 的 ${tasks.length} 个任务复制到今天吗？`)) return;
-
-    // Get text of tasks already existing today to avoid duplicates
-    const existingTodayTexts = new Set(
-        todos.filter(t => t.date === todayStr).map(t => t.text)
-    );
-
+    const existingTodayTexts = new Set(todos.filter(t => t.date === todayStr).map(t => t.text));
     const newTasks = tasks
-        .filter(t => !existingTodayTexts.has(t.text)) // Filter duplicates
+        .filter(t => !existingTodayTexts.has(t.text))
         .map((t, index) => ({
-            id: Date.now().toString() + index, // Ensure unique IDs
+            id: Date.now().toString() + index,
             text: t.text,
-            completed: false, // Reset completion
+            completed: false,
             date: todayStr,
-            phase: currentPhase // Use current phase
+            phase: currentPhase
         }));
 
     if (newTasks.length === 0) {
         alert('这些任务今天已经存在了，无需重复添加。');
         return;
     }
-
     setTodos([...newTasks, ...todos]);
   };
 
-  // --- Filtering & Grouping Logic ---
   const displayedTodos = useMemo(() => {
     let filtered = [...todos];
-
     if (isWidget) {
-      // Widget: Only show today's items
       return filtered.filter(t => t.date === todayStr);
     } else {
-      // Full Page Filters
-      
-      // 1. By Phase
       if (filterPhase !== 'all') {
         filtered = filtered.filter(t => t.phase === filterPhase);
       }
-      
-      // 2. By Date
       if (filterDate) {
         filtered = filtered.filter(t => t.date === filterDate);
       }
-
       return filtered;
     }
   }, [todos, isWidget, filterPhase, filterDate, todayStr]);
 
-  // Group by Date for Full Page View
   const groupedTodos = useMemo(() => {
     if (isWidget) return {};
     return displayedTodos.reduce((acc, todo) => {
@@ -105,7 +84,6 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
     }, {} as Record<string, TodoItem[]>);
   }, [displayedTodos, isWidget]);
 
-  // Sort dates descending
   const sortedDates = Object.keys(groupedTodos).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
   const stats = {
@@ -113,7 +91,6 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
     completed: displayedTodos.filter(t => t.completed).length
   };
 
-  // --- Render Widget View (Dashboard - Read/Check Only) ---
   if (isWidget) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
@@ -149,7 +126,6 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
     );
   }
 
-  // --- Render Full Page View (Timeline Style) ---
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
         {/* Header Section */}
@@ -162,7 +138,6 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
             </div>
             
             <div className="flex flex-wrap gap-3">
-                {/* Phase Filter */}
                 <div className="relative">
                     <Filter size={14} className="absolute left-3 top-3 text-gray-400"/>
                     <select 
@@ -175,7 +150,6 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                     </select>
                 </div>
 
-                 {/* Date Filter */}
                 <div className="relative">
                     <Calendar size={14} className="absolute left-3 top-3 text-gray-400"/>
                     <input 
@@ -197,7 +171,7 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
             </div>
         </div>
 
-        {/* Add New Input (Always adds to Today) */}
+        {/* Add New Input */}
         <form onSubmit={handleAdd} className="bg-white p-4 rounded-2xl shadow-md border border-indigo-100 flex gap-4 items-center focus-within:ring-2 focus-within:ring-indigo-100 transition-all sticky top-4 z-20">
             <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
                 <Plus size={24} />
@@ -216,8 +190,8 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
 
         {/* Timeline View */}
         <div className="relative pl-4 md:pl-8">
-            {/* Vertical Line */}
-            <div className="absolute left-[23px] md:left-[39px] top-4 bottom-0 w-0.5 bg-gray-200"></div>
+            {/* Continuous Vertical Line */}
+            <div className="absolute left-[23px] md:left-[39px] top-6 bottom-6 w-0.5 bg-gray-200"></div>
 
             {sortedDates.length === 0 ? (
                  <div className="flex flex-col items-center justify-center py-12 ml-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-300">
@@ -231,25 +205,31 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                         const isToday = dateKey === todayStr;
                         const tasks = groupedTodos[dateKey];
                         const completedCount = tasks.filter(t => t.completed).length;
+                        const allCompleted = completedCount === tasks.length && tasks.length > 0;
                         
                         return (
                             <div key={dateKey} className="relative group">
                                 {/* Timeline Node */}
-                                <div className={`absolute -left-[9px] md:-left-[9px] top-0 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 ${isToday ? 'bg-indigo-600 ring-4 ring-indigo-100' : 'bg-gray-400'}`}></div>
+                                <div className={`absolute -left-[9px] md:-left-[9px] top-1.5 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 transition-colors ${
+                                    isToday 
+                                        ? 'bg-indigo-600 ring-4 ring-indigo-100' 
+                                        : allCompleted 
+                                            ? 'bg-green-500' 
+                                            : 'bg-gray-400'
+                                }`}></div>
 
                                 <div className="ml-8 md:ml-12">
                                     {/* Date Header */}
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-baseline gap-3">
-                                            <h3 className={`text-lg font-bold ${isToday ? 'text-indigo-700' : 'text-gray-700'}`}>
-                                                {isToday ? '今天' : dateKey}
+                                            <h3 className={`text-xl font-bold tracking-tight ${isToday ? 'text-indigo-700' : 'text-gray-800'}`}>
+                                                {isToday ? '今天 (Today)' : new Date(dateKey).toLocaleDateString('zh-CN', {weekday: 'long', month: 'long', day: 'numeric'})}
                                             </h3>
-                                            <span className="text-xs font-mono text-gray-400">
-                                                完成度: {completedCount}/{tasks.length}
+                                            <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                {completedCount}/{tasks.length}
                                             </span>
                                         </div>
 
-                                        {/* Copy Schedule Button (Only for past dates) */}
                                         {!isToday && (
                                             <button 
                                                 onClick={() => copyScheduleToToday(dateKey, tasks)}
@@ -262,13 +242,17 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                                     </div>
 
                                     {/* Task List Box */}
-                                    <div className={`rounded-2xl border ${isToday ? 'bg-white border-indigo-100 shadow-md' : 'bg-gray-50 border-gray-200'} overflow-hidden transition-all hover:shadow-md`}>
+                                    <div className={`rounded-2xl border ${
+                                        isToday 
+                                            ? 'bg-white border-indigo-100 shadow-md ring-1 ring-indigo-50' 
+                                            : 'bg-gray-50/50 border-gray-200'
+                                        } overflow-hidden transition-all hover:shadow-md`}>
                                         {tasks.map((todo, index) => (
                                             <div 
                                                 key={todo.id} 
-                                                className={`flex items-start gap-4 p-3 ${index !== tasks.length - 1 ? 'border-b border-gray-100/50' : ''} group/item hover:bg-black/5 transition-colors`}
+                                                className={`flex items-start gap-4 p-3.5 ${index !== tasks.length - 1 ? 'border-b border-gray-100' : ''} group/item hover:bg-black/[0.02] transition-colors`}
                                             >
-                                                <button onClick={() => toggleComplete(todo.id)} className="mt-1 flex-shrink-0 text-gray-400 hover:text-indigo-600 transition-colors">
+                                                <button onClick={() => toggleComplete(todo.id)} className="mt-0.5 flex-shrink-0 text-gray-400 hover:text-indigo-600 transition-colors">
                                                     {todo.completed ? 
                                                         <CheckCircle2 size={20} className="text-green-500" /> : 
                                                         <Circle size={20} />
@@ -276,11 +260,11 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                                                 </button>
                                                 
                                                 <div className="flex-1 min-w-0">
-                                                    <p className={`text-sm leading-relaxed break-words ${todo.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                                                    <p className={`text-base leading-snug break-words ${todo.completed ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-700'}`}>
                                                         {todo.text}
                                                     </p>
                                                     {todo.phase && !isToday && (
-                                                        <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded">
+                                                        <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded font-medium">
                                                             {todo.phase.split('：')[0]}
                                                         </span>
                                                     )}
@@ -291,7 +275,7 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                                                     className="opacity-0 group-hover/item:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
                                                     title="删除"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <Trash2 size={15} />
                                                 </button>
                                             </div>
                                         ))}

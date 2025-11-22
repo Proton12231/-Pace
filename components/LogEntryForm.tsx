@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { StudyLog, StudyPhase, QuestionTypes, TrackingConfig } from '../types';
-import { Save, Upload, Clock, Image as ImageIcon, Info, Calendar, BookOpen, FileText } from 'lucide-react';
+import { Save, BookOpen, FileText, Info, Calendar } from 'lucide-react';
 
 interface LogEntryFormProps {
   onAddLog: (log: StudyLog) => void;
@@ -12,7 +12,6 @@ interface LogEntryFormProps {
   maxDate?: string;
 }
 
-// --- Static Components (Moved outside to fix focus loss bug) ---
 const TabButton = ({ id, label, active, onClick }: { id: string, label: string, active: boolean, onClick: () => void }) => (
   <button
     type="button"
@@ -110,7 +109,6 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({ onAddLog, currentPha
     }
   };
 
-  // Init active module
   useEffect(() => {
     if (currentPhase === StudyPhase.PHASE_1) {
       if (trackingConfig.phase1.vocab) setActiveModule('vocab');
@@ -162,7 +160,7 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({ onAddLog, currentPha
     } else if (activeModule === 'p2_writing') {
       log.p2WritingData = { taskType: p2WTask, topicType: p2WTopic, score: Number(p2WScore) };
     } else if (activeModule === 'p2_speaking') {
-      log.p2SpeakingData = { part: p2SPart, topic: p2STopic, score: Number(p2SScore) };
+      log.p2SpeakingData = { part: p2SPart, topic: p2STopic || '未分类', score: Number(p2SScore) };
     } else if (activeModule === 'mock') {
       const avg = (Number(mLScore) + Number(mRScore) + Number(mWScore) + Number(mSScore)) / 4;
       let final = Math.round(avg * 4) / 4;
@@ -183,7 +181,6 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({ onAddLog, currentPha
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Date & Module Selector */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200">
             <Calendar size={16} className="ml-2 text-gray-500"/>
@@ -217,7 +214,6 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({ onAddLog, currentPha
         </div>
       </div>
 
-      {/* --- Form Fields --- */}
       <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 space-y-6">
         {activeModule === 'vocab' && (
         <div className="space-y-4 animate-fade-in">
@@ -239,7 +235,6 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({ onAddLog, currentPha
             </div>
             <InputGroup label="笔记摘要"><textarea rows={3} value={rNote} onChange={e => setRNote(e.target.value)} className="block w-full rounded-xl border-gray-200 bg-gray-50 p-3 focus:ring-2 focus:ring-indigo-100 focus:bg-white transition-all" placeholder="记录今天的核心感悟..." /></InputGroup>
             
-            {/* Dual Image Upload */}
             <div className="grid grid-cols-2 gap-4">
                 <div onClick={() => chunkInputRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition-all h-32 flex flex-col items-center justify-center relative overflow-hidden group">
                     <input type="file" hidden ref={chunkInputRef} accept="image/*" onChange={e => handleImageUpload(e, setRChunkImage)} />
@@ -293,7 +288,6 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({ onAddLog, currentPha
         </div>
         )}
 
-        {/* Phase 2/3 Generic Wrappers */}
         {(activeModule.startsWith('p2_') || activeModule === 'mock') && (
             <div className="space-y-4 animate-fade-in">
                 {activeModule === 'p2_listening' && (
@@ -318,7 +312,16 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({ onAddLog, currentPha
                 {activeModule === 'p2_speaking' && (
                     <>
                         <InputGroup label="Part"><select value={p2SPart} onChange={e => setP2SPart(e.target.value as any)} className="w-full p-3 rounded-xl bg-gray-50 border border-gray-200">{QuestionTypes.SPEAKING_PART.map(p => <option key={p} value={p}>{p}</option>)}</select></InputGroup>
-                        <InputGroup label="话题"><TextInput value={p2STopic} onChange={e => setP2STopic(e.target.value)} /></InputGroup>
+                        <InputGroup label={p2SPart === 'Part 1' ? "Pool/Topic (可选)" : "核心话题 (Core Topic)"}>
+                            <TextInput 
+                                value={p2STopic} 
+                                onChange={e => setP2STopic(e.target.value)} 
+                                placeholder={p2SPart === 'Part 1' ? "例如：Hometown / Work" : "例如：Describe a person who..."}
+                            />
+                        </InputGroup>
+                        <p className="text-xs text-gray-400">
+                            {p2SPart === 'Part 1' ? "Part 1 通常包含多个小话题，可填主要的一个。" : "Part 2/3 通常围绕同一核心话题展开，请保持话题名称一致以便统计。"}
+                        </p>
                         <InputGroup label="得分"><NumberInput step="0.5" value={p2SScore} onChange={e => setP2SScore(Number(e.target.value))} /></InputGroup>
                     </>
                 )}

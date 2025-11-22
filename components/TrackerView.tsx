@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { StudyLog, StudyPhase, TrackingConfig } from '../types';
 import { LogEntryForm } from './LogEntryForm';
 import { Modal } from './ui/Modal';
-import { Plus, Filter, Search, History, Calendar, X } from 'lucide-react';
+import { Plus, Filter, Search, History, Calendar, X, BookOpen, Mic, PenTool, Headphones } from 'lucide-react';
 
 interface TrackerViewProps {
   logs: StudyLog[];
@@ -16,19 +16,17 @@ interface TrackerViewProps {
 export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, currentPhase, trackingConfig, phaseDates }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [viewPhase, setViewPhase] = useState<string>('all');
-  const [filterDate, setFilterDate] = useState<string>(''); // Date filter state
+  const [filterDate, setFilterDate] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // --- Filter Logs ---
   const displayedLogs = useMemo(() => {
     let filtered = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
-    // Filter by Phase
     if (viewPhase !== 'all') {
       filtered = filtered.filter(l => l.phase === viewPhase);
     }
 
-    // Filter by Date
     if (filterDate) {
         filtered = filtered.filter(l => l.date.startsWith(filterDate));
     }
@@ -36,23 +34,139 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
     return filtered;
   }, [logs, viewPhase, filterDate]);
 
-  // --- Determine Date Constraints for Form ---
-  const getDateConstraints = () => {
-    const today = new Date().toISOString().split('T')[0];
-    let min = undefined;
-    let max = today;
+  // --- Render Helpers ---
+  const getLogDetails = (log: StudyLog) => {
+      if (log.mockData) {
+          return {
+              icon: <div className="font-bold text-xs">MOCK</div>,
+              color: 'bg-slate-800 text-white',
+              title: `全真模考: ${log.mockData.book} ${log.mockData.test}`,
+              stats: (
+                <div className="flex gap-2 font-mono text-xs mt-1">
+                     <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">L:{log.mockData.listeningScore}</span>
+                     <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">R:{log.mockData.readingScore}</span>
+                     <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">W:{log.mockData.writingScore}</span>
+                     <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">S:{log.mockData.speakingScore}</span>
+                     <span className="bg-slate-800 text-white px-1.5 py-0.5 rounded font-bold">总分:{log.mockData.overallScore}</span>
+                </div>
+              )
+          };
+      }
+      if (log.vocabData) {
+          return {
+              icon: <BookOpen size={20} />,
+              color: 'bg-indigo-100 text-indigo-600',
+              title: '背单词',
+              stats: (
+                  <div className="flex gap-3 text-sm mt-1">
+                      <span className="text-green-600 font-medium">+ {log.vocabData.learned} 新词</span>
+                      <span className="text-red-500 font-medium">- {log.vocabData.forgotten} 遗忘</span>
+                      <span className="text-gray-400 text-xs mt-0.5">{log.vocabData.duration} min</span>
+                  </div>
+              )
+          };
+      }
+      if (log.readingIntensiveData) {
+          return {
+              icon: <PenTool size={20} />,
+              color: 'bg-emerald-100 text-emerald-600',
+              title: `阅读精读: ${log.readingIntensiveData.articleTitle || '无标题'}`,
+              stats: (
+                  <div className="mt-1">
+                    <div className="flex gap-3 text-sm text-gray-600">
+                        <span>生词: {log.readingIntensiveData.unknownWordCount}</span>
+                        <span>语块: {log.readingIntensiveData.chunkCount}</span>
+                        <span>时长: {log.readingIntensiveData.duration} min</span>
+                    </div>
+                    {log.readingIntensiveData.noteContent && (
+                        <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded mt-2 border border-gray-100">
+                            "{log.readingIntensiveData.noteContent}"
+                        </p>
+                    )}
+                  </div>
+              )
+          };
+      }
+      if (log.corpusData) {
+          return {
+              icon: <Headphones size={20} />,
+              color: 'bg-amber-100 text-amber-600',
+              title: `语料库: Chapter ${log.corpusData.chapter}-${log.corpusData.section}`,
+              stats: (
+                  <div className="flex gap-3 text-sm mt-1 items-center">
+                      <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">第 {log.corpusData.round} 轮</span>
+                      <span className={`${log.corpusData.accuracy >= 90 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}`}>
+                          {log.corpusData.accuracy}% 正确
+                      </span>
+                      <span className="text-gray-400 text-xs">({log.corpusData.correctSentences}/{log.corpusData.totalSentences})</span>
+                  </div>
+              )
+          };
+      }
+      if (log.p2ListeningData) {
+          return {
+              icon: <Headphones size={20} />,
+              color: 'bg-blue-100 text-blue-600',
+              title: `听力题型: ${log.p2ListeningData.questionType}`,
+              stats: (
+                  <div className="flex gap-3 text-sm mt-1">
+                      <span className="font-bold text-gray-700">正确率: {Math.round((log.p2ListeningData.correctCount / log.p2ListeningData.totalCount) * 100)}%</span>
+                      <span className="text-gray-400 text-xs mt-0.5">({log.p2ListeningData.correctCount}/{log.p2ListeningData.totalCount})</span>
+                  </div>
+              )
+          };
+      }
+      if (log.p2ReadingData) {
+           return {
+              icon: <BookOpen size={20} />,
+              color: 'bg-teal-100 text-teal-600',
+              title: `阅读题型: ${log.p2ReadingData.questionType}`,
+              stats: (
+                  <div className="flex gap-3 text-sm mt-1">
+                      <span className="font-bold text-gray-700">正确率: {Math.round((log.p2ReadingData.correctCount / log.p2ReadingData.totalCount) * 100)}%</span>
+                      <span className="text-gray-400 text-xs mt-0.5">({log.p2ReadingData.correctCount}/{log.p2ReadingData.totalCount})</span>
+                  </div>
+              )
+          };
+      }
+      if (log.p2WritingData) {
+           return {
+              icon: <PenTool size={20} />,
+              color: 'bg-purple-100 text-purple-600',
+              title: `写作: ${log.p2WritingData.taskType}`,
+              stats: (
+                  <div className="flex flex-col gap-1 mt-1">
+                       <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-800">{log.p2WritingData.topicType}</span>
+                            <span className="bg-purple-600 text-white px-2 py-0.5 rounded text-xs font-bold">{log.p2WritingData.score} 分</span>
+                       </div>
+                  </div>
+              )
+          };
+      }
+      if (log.p2SpeakingData) {
+           return {
+              icon: <Mic size={20} />,
+              color: 'bg-rose-100 text-rose-600',
+              title: `口语: ${log.p2SpeakingData.part}`,
+              stats: (
+                  <div className="flex flex-col gap-1 mt-1">
+                       <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-800 max-w-[200px] truncate" title={log.p2SpeakingData.topic}>{log.p2SpeakingData.topic}</span>
+                            <span className="bg-rose-600 text-white px-2 py-0.5 rounded text-xs font-bold">{log.p2SpeakingData.score} 分</span>
+                       </div>
+                  </div>
+              )
+          };
+      }
 
-    if (currentPhase === StudyPhase.PHASE_1) {
-      max = phaseDates.phase1End < today ? phaseDates.phase1End : today;
-    } else if (currentPhase === StudyPhase.PHASE_2) {
-      min = phaseDates.phase1End; // Can start after P1
-      max = phaseDates.phase2End < today ? phaseDates.phase2End : today;
-    } else {
-      min = phaseDates.phase2End;
-    }
-    return { min, max };
+      return {
+          icon: <Filter size={20} />,
+          color: 'bg-gray-100 text-gray-600',
+          title: '未知记录',
+          stats: null
+      };
   };
-  const { min, max } = getDateConstraints();
 
   return (
     <div className="space-y-6">
@@ -120,102 +234,54 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
               {viewPhase === 'all' && !filterDate && <p className="text-xs text-gray-400 mt-1">点击右上角“新增记录”开始追踪</p>}
            </div>
         ) : (
-           displayedLogs.map(log => (
-              <div key={log.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all group">
-                  <div className="flex items-start gap-4">
-                      {/* Icon / Image Thumbnail Section */}
-                      <div className="flex-shrink-0 flex gap-2">
-                          {/* Case: Reading Intensive Images */}
-                          {log.readingIntensiveData ? (
-                            <div className="flex flex-col gap-1">
-                                {log.readingIntensiveData.chunkImageUrl ? (
-                                    <div 
-                                        className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 cursor-pointer relative group/img"
-                                        onClick={() => setSelectedImage(log.readingIntensiveData!.chunkImageUrl!)}
-                                        title="查看语块截图"
-                                    >
-                                        <img src={log.readingIntensiveData.chunkImageUrl} className="w-full h-full object-cover" alt="Chunk" />
-                                        <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-white text-[8px] font-bold">语块</div>
-                                    </div>
-                                ) : null}
-                                {log.readingIntensiveData.noteImageUrl ? (
-                                    <div 
-                                        className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 cursor-pointer relative group/img"
-                                        onClick={() => setSelectedImage(log.readingIntensiveData!.noteImageUrl!)}
-                                        title="查看手帐"
-                                    >
-                                        <img src={log.readingIntensiveData.noteImageUrl} className="w-full h-full object-cover" alt="Note" />
-                                        <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-white text-[8px] font-bold">手帐</div>
-                                    </div>
-                                ) : null}
-                                {!log.readingIntensiveData.chunkImageUrl && !log.readingIntensiveData.noteImageUrl && (
-                                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold bg-indigo-100 text-indigo-600">
-                                        阅
-                                    </div>
-                                )}
-                            </div>
-                          ) : (
-                              /* Default Type Icons */
-                              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${
-                                  log.corpusData ? 'bg-amber-100 text-amber-600' :
-                                  log.vocabData ? 'bg-blue-100 text-blue-600' : 
-                                  log.mockData ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'
-                              }`}>
-                                  {log.corpusData ? '听' : log.vocabData ? '词' : log.mockData ? '考' : '习'}
-                              </div>
-                          )}
-                      </div>
+           displayedLogs.map(log => {
+              const details = getLogDetails(log);
+              return (
+                <div key={log.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all group">
+                    <div className="flex items-start gap-4">
+                        {/* Icon / Image Thumbnail Section */}
+                        <div className="flex-shrink-0 flex flex-col gap-2">
+                            {log.readingIntensiveData?.chunkImageUrl || log.readingIntensiveData?.noteImageUrl ? (
+                                <div className="flex flex-col gap-1">
+                                    {log.readingIntensiveData.chunkImageUrl && (
+                                        <div 
+                                            className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 cursor-pointer relative group/img"
+                                            onClick={() => setSelectedImage(log.readingIntensiveData!.chunkImageUrl!)}
+                                        >
+                                            <img src={log.readingIntensiveData.chunkImageUrl} className="w-full h-full object-cover" alt="Chunk" />
+                                            <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-white text-[8px] font-bold">语块</div>
+                                        </div>
+                                    )}
+                                    {log.readingIntensiveData.noteImageUrl && (
+                                        <div 
+                                            className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 cursor-pointer relative group/img"
+                                            onClick={() => setSelectedImage(log.readingIntensiveData!.noteImageUrl!)}
+                                        >
+                                            <img src={log.readingIntensiveData.noteImageUrl} className="w-full h-full object-cover" alt="Note" />
+                                            <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-white text-[8px] font-bold">手帐</div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${details.color}`}>
+                                    {details.icon}
+                                </div>
+                            )}
+                        </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start">
-                              <h4 className="font-bold text-gray-800 truncate pr-4">
-                                  {log.readingIntensiveData?.articleTitle || 
-                                   (log.corpusData ? `语料库 Chapter ${log.corpusData.chapter}` : 
-                                   (log.p2WritingData ? `写作 ${log.p2WritingData.taskType}` : 
-                                   log.phase.split('：')[0]))}
-                              </h4>
-                              <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(log.date).toLocaleDateString()}</span>
-                          </div>
-                          
-                          <div className="text-sm text-gray-600 mt-1 space-y-1">
-                              {log.corpusData && (
-                                  <div className="flex gap-3">
-                                      <span>Ch{log.corpusData.chapter}-{log.corpusData.section} (R{log.corpusData.round})</span>
-                                      <span className={`${log.corpusData.accuracy >= 90 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}`}>
-                                          {log.corpusData.accuracy}% 正确
-                                      </span>
-                                  </div>
-                              )}
-                              {log.readingIntensiveData && (
-                                  <div>
-                                      <div className="flex gap-3 text-xs mb-1">
-                                        <span>📚 生词: {log.readingIntensiveData.unknownWordCount}</span>
-                                        <span>⏱️ {log.readingIntensiveData.duration}分</span>
-                                      </div>
-                                      {log.readingIntensiveData.noteContent && <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">"{log.readingIntensiveData.noteContent}"</p>}
-                                  </div>
-                              )}
-                              {log.vocabData && (
-                                  <div className="flex gap-3">
-                                      <span className="text-green-600">+ {log.vocabData.learned} 新词</span>
-                                      <span className="text-red-500">- {log.vocabData.forgotten} 遗忘</span>
-                                  </div>
-                              )}
-                              {log.mockData && (
-                                  <div className="flex gap-2 font-mono text-xs mt-1">
-                                      <span className="bg-gray-100 px-1 rounded">L:{log.mockData.listeningScore}</span>
-                                      <span className="bg-gray-100 px-1 rounded">R:{log.mockData.readingScore}</span>
-                                      <span className="bg-gray-100 px-1 rounded">W:{log.mockData.writingScore}</span>
-                                      <span className="bg-gray-100 px-1 rounded">S:{log.mockData.speakingScore}</span>
-                                      <span className="bg-black text-white px-1 rounded font-bold">All:{log.mockData.overallScore}</span>
-                                  </div>
-                              )}
-                          </div>
-                      </div>
-                  </div>
-              </div>
-           ))
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                                <h4 className="font-bold text-gray-800 truncate pr-4">{details.title}</h4>
+                                <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(log.date).toLocaleDateString()}</span>
+                            </div>
+                            
+                            {details.stats}
+                        </div>
+                    </div>
+                </div>
+              );
+           })
         )}
       </div>
 
@@ -226,8 +292,6 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
              currentPhase={currentPhase} 
              trackingConfig={trackingConfig} 
              onClose={() => setIsAddModalOpen(false)}
-             minDate={min}
-             maxDate={max}
           />
       </Modal>
 
