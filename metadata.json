@@ -1,0 +1,7 @@
+{
+  "name": "IELTS Pace | 雅思全景备考追踪",
+  "description": "全中文雅思备考追踪系统。分阶段管理（基础输入、技巧强化、全真模考），集成语料库听写、阅读精读手帐及模考自动算分功能。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
