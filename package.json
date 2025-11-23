@@ -1,20 +1,23 @@
 {
-  "name": "ielts-pace-|-雅思全景备考追踪",
+  "name": "ielts-pace-",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://Proton12231.github.io/SyntaxLens",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
     "@google/genai": "^1.30.0",
-    "lucide-react": "^0.554.0",
     "apexcharts": "^3.44.0",
-    "react-apexcharts": "^1.4.1"
+    "gh-pages": "^6.3.0",
+    "lucide-react": "^0.554.0",
+    "react": "^19.2.0",
+    "react-apexcharts": "^1.4.1",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
