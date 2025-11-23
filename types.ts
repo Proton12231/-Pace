@@ -29,6 +29,12 @@ export interface TrackingConfig {
   };
 }
 
+export interface PhaseStrategy {
+  title: string;
+  description: string; // Supports HTML/Rich text for lists
+  colorTheme: 'indigo' | 'blue' | 'rose';
+}
+
 // 题型与话题常量
 export const QuestionTypes = {
   LISTENING: ['地图题', '表格填空', '单选题', '多选题', '流程图', '句子填空', '配对题'],

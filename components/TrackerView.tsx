@@ -3,18 +3,22 @@ import React, { useState, useMemo } from 'react';
 import { StudyLog, StudyPhase, TrackingConfig } from '../types';
 import { LogEntryForm } from './LogEntryForm';
 import { Modal } from './ui/Modal';
-import { Plus, Filter, Search, History, Calendar, X, BookOpen, Mic, PenTool, Headphones } from 'lucide-react';
+import { Plus, Filter, Search, History, X, BookOpen, Mic, PenTool, Headphones, Edit2, Trash2 } from 'lucide-react';
+import { Select, Input, Button } from './ui/FormComponents';
 
 interface TrackerViewProps {
   logs: StudyLog[];
   onAddLog: (log: StudyLog) => void;
+  onUpdateLog: (log: StudyLog) => void;
+  onDeleteLog: (logId: string) => void;
   currentPhase: StudyPhase;
   trackingConfig: TrackingConfig;
   phaseDates: { phase1End: string; phase2End: string };
 }
 
-export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, currentPhase, trackingConfig, phaseDates }) => {
+export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, onUpdateLog, onDeleteLog, currentPhase, trackingConfig, phaseDates }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState<StudyLog | null>(null);
   const [viewPhase, setViewPhase] = useState<string>('all');
   const [filterDate, setFilterDate] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -33,6 +37,26 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
 
     return filtered;
   }, [logs, viewPhase, filterDate]);
+
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+          onDeleteLog(id);
+  };
+
+  const handleEditClick = (log: StudyLog, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditingLog(log);
+  };
+
+  const handleFormSubmit = (log: StudyLog) => {
+      if (editingLog) {
+          onUpdateLog(log);
+          setEditingLog(null);
+      } else {
+          onAddLog(log);
+          setIsAddModalOpen(false);
+      }
+  };
 
   // --- Render Helpers ---
   const getLogDetails = (log: StudyLog) => {
@@ -179,34 +203,31 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
            <p className="text-gray-500 text-sm mt-1">记录每一次进步，复盘每一个脚印。</p>
         </div>
         
-        <div className="flex flex-wrap gap-3 w-full xl:w-auto">
+        <div className="flex flex-wrap gap-3 w-full xl:w-auto items-end">
             {/* Phase Filter */}
-            <div className="relative flex-1 xl:flex-none min-w-[140px]">
-                <Filter size={14} className="absolute left-3 top-3 text-gray-400"/>
-                <select 
-                    value={viewPhase} 
+            <div className="flex-1 xl:flex-none min-w-[140px]">
+                <Select 
+                    value={viewPhase}
                     onChange={e => setViewPhase(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 bg-gray-50 rounded-lg text-sm border-none focus:ring-2 focus:ring-indigo-100 cursor-pointer text-gray-600 appearance-none"
-                >
-                    <option value="all">全部阶段</option>
-                    {Object.values(StudyPhase).map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+                    options={[
+                        { value: 'all', label: '全部阶段' },
+                        ...Object.values(StudyPhase).map(p => ({ value: p, label: p }))
+                    ]}
+                />
             </div>
 
             {/* Date Filter */}
             <div className="relative flex-1 xl:flex-none min-w-[140px]">
-                <Calendar size={14} className="absolute left-3 top-3 text-gray-400"/>
-                <input 
-                    type="date" 
+                <Input 
+                    type="date"
                     value={filterDate}
                     onChange={(e) => setFilterDate(e.target.value)}
-                    className="w-full pl-8 pr-8 py-2 bg-gray-50 rounded-lg text-sm border-none focus:ring-2 focus:ring-indigo-100 text-gray-600"
-                    placeholder="筛选日期"
+                    className={filterDate ? 'pr-8' : ''}
                 />
                 {filterDate && (
                     <button 
                         onClick={() => setFilterDate('')}
-                        className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-[13px] text-gray-400 hover:text-gray-600"
                     >
                         <X size={14} />
                     </button>
@@ -214,12 +235,13 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
             </div>
 
             {/* Add Button */}
-            <button 
+            <Button 
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all w-full sm:w-auto"
+                icon={<Plus size={18} />}
+                className="w-full sm:w-auto"
             >
-                <Plus size={18} /> 新增记录
-            </button>
+                新增记录
+            </Button>
         </div>
       </div>
 
@@ -237,8 +259,8 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
            displayedLogs.map(log => {
               const details = getLogDetails(log);
               return (
-                <div key={log.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all group">
-                    <div className="flex items-start gap-4">
+                <div key={log.id} className="relative bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-all group">
+                    <div className="flex items-start gap-4 pr-16"> {/* Add padding right for buttons */}
                         {/* Icon / Image Thumbnail Section */}
                         <div className="flex-shrink-0 flex flex-col gap-2">
                             {log.readingIntensiveData?.chunkImageUrl || log.readingIntensiveData?.noteImageUrl ? (
@@ -279,6 +301,24 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
                             {details.stats}
                         </div>
                     </div>
+
+                    {/* Actions - Absolute positioned */}
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button 
+                            onClick={(e) => handleEditClick(log, e)}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="编辑"
+                         >
+                            <Edit2 size={16} />
+                         </button>
+                         <button 
+                            onClick={(e) => handleDeleteClick(log.id, e)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="删除"
+                         >
+                            <Trash2 size={16} />
+                         </button>
+                    </div>
                 </div>
               );
            })
@@ -286,12 +326,13 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ logs, onAddLog, curren
       </div>
 
       {/* Modals */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={`新增${currentPhase}记录`} maxWidth="lg">
+      <Modal isOpen={isAddModalOpen || !!editingLog} onClose={() => { setIsAddModalOpen(false); setEditingLog(null); }} title={editingLog ? "编辑记录" : `新增${currentPhase}记录`} maxWidth="lg">
           <LogEntryForm 
-             onAddLog={onAddLog} 
+             initialData={editingLog || undefined}
+             onAddLog={handleFormSubmit} 
              currentPhase={currentPhase} 
              trackingConfig={trackingConfig} 
-             onClose={() => setIsAddModalOpen(false)}
+             onClose={() => { setIsAddModalOpen(false); setEditingLog(null); }}
           />
       </Modal>
 

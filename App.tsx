@@ -5,9 +5,11 @@ import { CountdownWidget } from './components/CountdownWidget';
 import { TodoList } from './components/TodoList';
 import { TrackerView } from './components/TrackerView';
 import { Charts } from './components/Charts';
-import { StudyPhase, GoalConfig, StudyLog, TodoItem } from './types';
+import { PhaseStrategyCard } from './components/PhaseStrategyCard';
+import { StudyPhase, GoalConfig, StudyLog, TodoItem, PhaseStrategy } from './types';
 import { analyzeStudyProgress } from './services/geminiService';
-import { BrainCircuit, Settings as SettingsIcon, Info, Calendar } from 'lucide-react';
+import { BrainCircuit, Settings as SettingsIcon, Calendar } from 'lucide-react';
+import { Input, Button } from './components/ui/FormComponents';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -42,15 +44,69 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Phase Strategies State
+  const [phaseStrategies, setPhaseStrategies] = useState<Record<StudyPhase, PhaseStrategy>>(() => {
+    const saved = localStorage.getItem('ielts_strategies_v3');
+    const defaultStrategies: Record<StudyPhase, PhaseStrategy> = {
+      [StudyPhase.PHASE_1]: {
+        title: "基础夯实",
+        description: `
+          <ul class="list-disc list-inside space-y-2">
+            <li><strong>语料库听写</strong>: 重点攻克3/4/5/11章。每天一节，<span class="text-yellow-300 font-bold">正确率 &lt; 90% 必须重听</span>。</li>
+            <li><strong>阅读精读</strong>: 每天一篇贝壳阅读/剑桥真题。必须产出<span class="text-yellow-300 font-bold">生词本</span>和<span class="text-yellow-300 font-bold">同义替换表</span>。</li>
+            <li><strong>单词</strong>: 每天保持200词的输入量，注重发音。</li>
+          </ul>
+        `,
+        colorTheme: 'indigo'
+      },
+      [StudyPhase.PHASE_2]: {
+        title: "技巧突破",
+        description: `
+          <ul class="list-disc list-inside space-y-2">
+            <li><strong>听力</strong>: 专项练习地图题方位词、选择题干扰项排除。</li>
+            <li><strong>写作</strong>: 小作文积累数据描述词，大作文积累逻辑链（审题为王）。</li>
+            <li><strong>阅读</strong>: 针对性训练 Heading 和 T/F/NG 题型技巧。</li>
+          </ul>
+        `,
+        colorTheme: 'blue'
+      },
+      [StudyPhase.PHASE_3]: {
+        title: "全真模考",
+        description: `
+          <p class="mb-2">严格按照考试时间（9:00-12:00）进行全套模考。</p>
+          <ul class="list-disc list-inside">
+             <li>重点分析错题原因，而非仅仅关注分数。</li>
+             <li>口语需进行录音并回听，检查流利度与语法错误。</li>
+          </ul>
+        `,
+        colorTheme: 'rose'
+      }
+    };
+    return saved ? JSON.parse(saved) : defaultStrategies;
+  });
+
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [loadingAi, setLoadingAi] = useState(false);
 
   useEffect(() => { localStorage.setItem('ielts_goals_v3', JSON.stringify(goals)); }, [goals]);
   useEffect(() => { localStorage.setItem('ielts_logs_v3', JSON.stringify(logs)); }, [logs]);
   useEffect(() => { localStorage.setItem('ielts_todos_v3', JSON.stringify(todos)); }, [todos]);
+  useEffect(() => { localStorage.setItem('ielts_strategies_v3', JSON.stringify(phaseStrategies)); }, [phaseStrategies]);
 
   const addLog = (log: StudyLog) => {
     setLogs([log, ...logs]);
+  };
+
+  const updateLog = (updatedLog: StudyLog) => {
+    setLogs(logs.map(log => log.id === updatedLog.id ? updatedLog : log));
+  };
+
+  const deleteLog = (logId: string) => {
+    setLogs(logs.filter(log => log.id !== logId));
+  };
+
+  const handleUpdateStrategy = (phase: StudyPhase, newStrategy: PhaseStrategy) => {
+    setPhaseStrategies(prev => ({ ...prev, [phase]: newStrategy }));
   };
 
   const handleGetAdvice = async () => {
@@ -60,58 +116,27 @@ const App: React.FC = () => {
     setLoadingAi(false);
   };
 
-  const getPhaseStrategyText = (phase: StudyPhase) => {
-    switch (phase) {
-      case StudyPhase.PHASE_1:
-        return (
-          <div className="bg-indigo-600 text-white p-6 rounded-2xl shadow-lg mb-6 relative overflow-hidden">
-            <div className="relative z-10">
-              <h2 className="text-xl font-bold flex items-center gap-2 mb-3">
-                 <Info className="text-indigo-200" /> {phase} 核心策略
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base bg-indigo-700/30 p-4 rounded-xl border border-indigo-500/30">
-                 <div>
-                    <span className="font-bold text-indigo-200 block mb-1">📖 语料库听写</span>
-                    <p>重点攻克3/4/5/11章。每天一节，<span className="text-yellow-300 font-bold">正确率 &lt; 90% 必须重听</span>，直到达标。</p>
-                 </div>
-                 <div>
-                    <span className="font-bold text-indigo-200 block mb-1">🧐 阅读精读</span>
-                    <p>每天一篇贝壳阅读。必须产出<span className="text-yellow-300 font-bold">生词本</span>和<span className="text-yellow-300 font-bold">同义替换表</span>。</p>
-                 </div>
-              </div>
-            </div>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-          </div>
-        );
-      case StudyPhase.PHASE_2:
-        return (
-            <div className="bg-blue-600 text-white p-6 rounded-2xl shadow-lg mb-6">
-               <h2 className="text-xl font-bold flex items-center gap-2 mb-3">
-                 <Info className="text-blue-200" /> {phase} 题型突破
-              </h2>
-              <ul className="list-disc list-inside space-y-1 text-blue-50">
-                  <li>听力：专项练习地图题方位词、选择题干扰项排除。</li>
-                  <li>写作：小作文积累数据描述词，大作文积累逻辑链（审题为王）。</li>
-                  <li>阅读：针对性训练 Heading 和 T/F/NG 题型技巧。</li>
-              </ul>
-            </div>
-        );
-      case StudyPhase.PHASE_3:
-        return (
-            <div className="bg-rose-600 text-white p-6 rounded-2xl shadow-lg mb-6">
-               <h2 className="text-xl font-bold flex items-center gap-2 mb-3">
-                 <Info className="text-rose-200" /> {phase} 全真冲刺
-              </h2>
-              <p className="text-rose-50">严格按照考试时间（9:00-12:00）进行全套模考。重点分析错题原因，而非仅仅关注分数。</p>
-            </div>
-        );
-    }
+  const getLogSummary = (log: StudyLog) => {
+    // Replicate TrackerView logic roughly for dashboard summary
+    if (log.vocabData) return { title: '背单词', detail: `+${log.vocabData.learned} / -${log.vocabData.forgotten}` };
+    if (log.readingIntensiveData) return { title: '阅读精读', detail: `${log.readingIntensiveData.articleTitle || '无标题'}` };
+    if (log.corpusData) return { title: `语料库 C${log.corpusData.chapter}`, detail: `${log.corpusData.accuracy}% (${log.corpusData.correctSentences}/${log.corpusData.totalSentences})` };
+    if (log.p2ListeningData) return { title: `听力-${log.p2ListeningData.questionType}`, detail: `${Math.round(log.p2ListeningData.correctCount/log.p2ListeningData.totalCount*100)}%` };
+    if (log.p2ReadingData) return { title: `阅读-${log.p2ReadingData.questionType}`, detail: `${Math.round(log.p2ReadingData.correctCount/log.p2ReadingData.totalCount*100)}%` };
+    if (log.p2WritingData) return { title: `写作-${log.p2WritingData.taskType}`, detail: `${log.p2WritingData.score}分` };
+    if (log.p2SpeakingData) return { title: `口语-${log.p2SpeakingData.part}`, detail: `${log.p2SpeakingData.score}分` };
+    if (log.mockData) return { title: '全真模考', detail: `总分 ${log.mockData.overallScore}` };
+    return { title: '学习记录', detail: '已完成' };
   };
 
   const renderDashboard = () => (
     <div className="animate-fade-in">
-       {/* 1. Top: Current Phase Strategy */}
-       {getPhaseStrategyText(goals.currentPhase)}
+       {/* 1. Top: Phase Strategy Card */}
+       <PhaseStrategyCard 
+          phase={goals.currentPhase}
+          strategy={phaseStrategies[goals.currentPhase]}
+          onUpdate={(s) => handleUpdateStrategy(goals.currentPhase, s)}
+       />
 
        {/* 2. Countdown & Targets */}
        <CountdownWidget 
@@ -130,14 +155,15 @@ const App: React.FC = () => {
                     <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-400">
                         <BrainCircuit /> AI 备考助手
                     </h3>
-                    <button 
+                    <Button 
                         onClick={handleGetAdvice}
                         disabled={loadingAi}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        variant="primary"
+                        className="!py-1.5 !px-3 !text-sm"
+                        icon={loadingAi ? <span className="animate-spin">⏳</span> : <span>✨</span>}
                     >
-                        {loadingAi ? <span className="animate-spin">⏳</span> : '✨'}
                         {loadingAi ? '深度分析中...' : '生成今日建议'}
-                    </button>
+                    </Button>
                 </div>
                 {aiAdvice ? (
                     <div className="prose prose-invert prose-sm max-w-none bg-white/5 p-4 rounded-xl border border-white/10">
@@ -159,28 +185,20 @@ const App: React.FC = () => {
                     <button onClick={() => setActiveTab('tracker')} className="text-sm text-indigo-600 font-medium hover:underline">去记录</button>
                   </div>
                   <div className="space-y-3">
-                      {logs.slice(0, 3).map(log => (
-                          <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                              <div>
-                                  <p className="text-sm font-bold text-gray-800">
-                                    {log.vocabData && `背单词`}
-                                    {log.readingIntensiveData && `阅读精读`}
-                                    {log.corpusData && `语料库 C${log.corpusData.chapter}`}
-                                    {log.p2ListeningData && `听力-${log.p2ListeningData.questionType}`}
-                                    {log.p2WritingData && `写作 ${log.p2WritingData.taskType}`}
-                                    {log.mockData && `全真模考`}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-0.5">{new Date(log.date).toLocaleDateString('zh-CN')}</p>
-                              </div>
-                              <span className="text-sm font-mono font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
-                                {log.corpusData && `${log.corpusData.accuracy}%`}
-                                {log.mockData && `${log.mockData.overallScore}`}
-                                {log.vocabData && `+${log.vocabData.learned}`}
-                                {log.p2WritingData && `${log.p2WritingData.score}`}
-                                {log.p2ListeningData && `${log.p2ListeningData.correctCount}/${log.p2ListeningData.totalCount}`}
-                              </span>
-                          </div>
-                      ))}
+                      {logs.slice(0, 3).map(log => {
+                          const summary = getLogSummary(log);
+                          return (
+                            <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
+                                <div>
+                                    <p className="text-sm font-bold text-gray-800">{summary.title}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">{new Date(log.date).toLocaleDateString('zh-CN')}</p>
+                                </div>
+                                <span className="text-sm font-mono font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                                    {summary.detail}
+                                </span>
+                            </div>
+                          );
+                      })}
                       {logs.length === 0 && <p className="text-gray-400 text-sm">暂无数据，开始您的第一次记录吧！</p>}
                   </div>
               </div>
@@ -231,24 +249,18 @@ const App: React.FC = () => {
                    <Calendar size={14}/> 阶段规划
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">阶段一 结束日期</label>
-                        <input 
-                          type="date" 
-                          value={goals.phaseDates?.phase1End || ''} 
-                          onChange={e => setGoals({...goals, phaseDates: {...goals.phaseDates, phase1End: e.target.value}})} 
-                          className="w-full p-2 border rounded-lg text-sm" 
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">阶段二 结束日期</label>
-                        <input 
-                          type="date" 
-                          value={goals.phaseDates?.phase2End || ''} 
-                          onChange={e => setGoals({...goals, phaseDates: {...goals.phaseDates, phase2End: e.target.value}})} 
-                          className="w-full p-2 border rounded-lg text-sm" 
-                        />
-                    </div>
+                    <Input 
+                        label="阶段一 结束日期"
+                        type="date"
+                        value={goals.phaseDates?.phase1End || ''} 
+                        onChange={e => setGoals({...goals, phaseDates: {...goals.phaseDates, phase1End: e.target.value}})} 
+                    />
+                     <Input 
+                        label="阶段二 结束日期"
+                        type="date"
+                        value={goals.phaseDates?.phase2End || ''} 
+                        onChange={e => setGoals({...goals, phaseDates: {...goals.phaseDates, phase2End: e.target.value}})} 
+                    />
                 </div>
                 <p className="text-xs text-gray-400 mt-2">* 日期设置将影响记录表单的日期选择范围。</p>
             </div>
@@ -257,20 +269,29 @@ const App: React.FC = () => {
             <div>
                 <h3 className="text-sm font-bold text-gray-900 uppercase mb-3">目标设定</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                   <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">总分目标</label>
-                        <input type="number" step="0.5" value={goals.targetScore} onChange={e => setGoals({...goals, targetScore: Number(e.target.value)})} className="w-full p-2 border rounded-lg" />
-                   </div>
-                   <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">考试日期</label>
-                        <input type="date" value={goals.examDate.split('T')[0]} onChange={e => setGoals({...goals, examDate: new Date(e.target.value).toISOString()})} className="w-full p-2 border rounded-lg" />
-                   </div>
+                   <Input 
+                        label="总分目标"
+                        type="number" step="0.5" 
+                        value={goals.targetScore} 
+                        onChange={e => setGoals({...goals, targetScore: Number(e.target.value)})} 
+                   />
+                   <Input 
+                        label="考试日期"
+                        type="date" 
+                        value={goals.examDate.split('T')[0]} 
+                        onChange={e => setGoals({...goals, examDate: new Date(e.target.value).toISOString()})} 
+                   />
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                     {(['listening', 'reading', 'writing', 'speaking'] as const).map(sub => (
-                        <div key={sub}>
-                            <label className="block text-xs font-medium text-gray-500 mb-1 capitalize">{sub}</label>
-                            <input type="number" step="0.5" value={goals.targetSubScores[sub]} onChange={e => setGoals({...goals, targetSubScores: {...goals.targetSubScores, [sub]: Number(e.target.value)}})} className="w-full p-2 border rounded-lg text-center" />
+                         <div key={sub}>
+                            <label className="block text-xs font-medium text-gray-500 mb-1 capitalize text-center">{sub}</label>
+                            <input 
+                                type="number" step="0.5" 
+                                value={goals.targetSubScores[sub]} 
+                                onChange={e => setGoals({...goals, targetSubScores: {...goals.targetSubScores, [sub]: Number(e.target.value)}})} 
+                                className="w-full p-2 border rounded-lg text-center bg-gray-50" 
+                            />
                         </div>
                     ))}
                 </div>
@@ -308,10 +329,12 @@ const App: React.FC = () => {
       case 'tracker': return (
         <TrackerView 
           logs={logs} 
-          onAddLog={addLog} 
+          onAddLog={addLog}
+          onUpdateLog={updateLog}
+          onDeleteLog={deleteLog}
           currentPhase={goals.currentPhase} 
           trackingConfig={goals.tracking}
-          phaseDates={goals.phaseDates || { phase1End: '', phase2End: '' }} // Fallback if old state
+          phaseDates={goals.phaseDates || { phase1End: '', phase2End: '' }} 
         />
       );
       case 'todos': return <TodoList todos={todos} setTodos={setTodos} currentPhase={goals.currentPhase} isWidget={false} />;

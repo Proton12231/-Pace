@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { TodoItem, StudyPhase } from '../types';
-import { Plus, CheckCircle2, Circle, Trash2, Calendar, Filter, ListTodo, Copy, X, History } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, Calendar, ListTodo, Copy, X, History } from 'lucide-react';
+import { Input, Select, Button } from './ui/FormComponents';
 
 interface TodoListProps {
   todos: TodoItem[];
@@ -137,32 +138,29 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                 <p className="text-gray-500 text-sm mt-1">回顾过往足迹，复制高效计划。</p>
             </div>
             
-            <div className="flex flex-wrap gap-3">
-                <div className="relative">
-                    <Filter size={14} className="absolute left-3 top-3 text-gray-400"/>
-                    <select 
-                        value={filterPhase} 
+            <div className="flex flex-wrap gap-3 items-end">
+                <div className="min-w-[140px]">
+                     <Select 
+                        value={filterPhase}
                         onChange={e => setFilterPhase(e.target.value)}
-                        className="pl-8 pr-3 py-2 bg-gray-50 rounded-lg text-sm border-none focus:ring-2 focus:ring-indigo-100 cursor-pointer text-gray-600 appearance-none min-w-[120px]"
-                    >
-                        <option value="all">所有阶段</option>
-                        {Object.values(StudyPhase).map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                        options={[
+                            { value: 'all', label: '所有阶段' },
+                            ...Object.values(StudyPhase).map(p => ({ value: p, label: p.split('：')[0] }))
+                        ]}
+                     />
                 </div>
 
-                <div className="relative">
-                    <Calendar size={14} className="absolute left-3 top-3 text-gray-400"/>
-                    <input 
+                <div className="relative min-w-[150px]">
+                    <Input 
                         type="date" 
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
-                        className="pl-8 pr-8 py-2 bg-gray-50 rounded-lg text-sm border-none focus:ring-2 focus:ring-indigo-100 text-gray-600 min-w-[140px]"
-                        placeholder="筛选日期"
+                        className={filterDate ? 'pr-8' : ''}
                     />
                     {filterDate && (
                         <button 
                             onClick={() => setFilterDate('')}
-                            className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
+                            className="absolute right-3 top-[13px] text-gray-400 hover:text-gray-600"
                         >
                             <X size={14} />
                         </button>
@@ -181,23 +179,20 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                 value={newTodo}
                 onChange={e => setNewTodo(e.target.value)}
                 placeholder="添加今日 (Today) 的任务..."
-                className="flex-1 text-lg bg-transparent border-none focus:ring-0 placeholder-gray-400"
+                className="flex-1 text-lg bg-transparent border-none focus:ring-0 placeholder-gray-400 outline-none"
             />
-            <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-medium hover:bg-indigo-700 transition-colors flex-shrink-0 shadow-lg shadow-indigo-200">
-                添加
-            </button>
+            <Button type="submit">添加</Button>
         </form>
 
         {/* Timeline View */}
-        <div className="relative pl-4 md:pl-8">
-            {/* Continuous Vertical Line */}
-            <div className="absolute left-[23px] md:left-[39px] top-6 bottom-6 w-0.5 bg-gray-200"></div>
+        <div className="relative pl-6 md:pl-10">
+            {/* Continuous Vertical Line - Absolute relative to container */}
+            <div className="absolute left-[31px] md:left-[47px] top-6 bottom-0 w-[2px] bg-gray-200 rounded-full"></div>
 
             {sortedDates.length === 0 ? (
-                 <div className="flex flex-col items-center justify-center py-12 ml-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-300">
+                 <div className="flex flex-col items-center justify-center py-12 ml-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-300 relative z-10">
                     <ListTodo size={48} className="mb-4 opacity-20" />
                     <p>暂无日程记录</p>
-                    {filterDate && <p className="text-xs mt-1 text-indigo-400 cursor-pointer" onClick={() => setFilterDate('')}>清除日期筛选</p>}
                  </div>
             ) : (
                 <div className="space-y-12">
@@ -208,17 +203,18 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                         const allCompleted = completedCount === tasks.length && tasks.length > 0;
                         
                         return (
-                            <div key={dateKey} className="relative group">
-                                {/* Timeline Node */}
-                                <div className={`absolute -left-[9px] md:-left-[9px] top-1.5 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 transition-colors ${
+                            <div key={dateKey} className="relative group pl-8">
+                                {/* Timeline Dot - Absolute relative to current item container */}
+                                <div 
+                                    className={`absolute left-[0px] md:left-[0px] top-[6px] w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-sm z-10 transition-colors ${
                                     isToday 
-                                        ? 'bg-indigo-600 ring-4 ring-indigo-100' 
+                                        ? 'bg-indigo-600 ring-4 ring-indigo-100 w-[18px] h-[18px] -left-[2px]' 
                                         : allCompleted 
-                                            ? 'bg-green-500' 
-                                            : 'bg-gray-400'
+                                            ? 'bg-green-500 w-[14px] h-[14px]' 
+                                            : 'bg-gray-400 w-[14px] h-[14px]'
                                 }`}></div>
 
-                                <div className="ml-8 md:ml-12">
+                                <div>
                                     {/* Date Header */}
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-baseline gap-3">
@@ -231,13 +227,14 @@ export const TodoList: React.FC<TodoListProps> = ({ todos, setTodos, currentPhas
                                         </div>
 
                                         {!isToday && (
-                                            <button 
+                                            <Button 
+                                                variant="secondary"
                                                 onClick={() => copyScheduleToToday(dateKey, tasks)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm"
+                                                className="!py-1.5 !px-3 !text-xs"
+                                                icon={<Copy size={12} />}
                                             >
-                                                <Copy size={12} />
                                                 复制到今天
-                                            </button>
+                                            </Button>
                                         )}
                                     </div>
 

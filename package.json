@@ -1,23 +1,20 @@
 {
-  "name": "ielts-pace-",
+  "name": "ielts-pace-|-雅思全景备考追踪",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://proton12231.github.io/-Pace/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "deploy": "gh-pages -d dist"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.30.0",
-    "apexcharts": "^3.44.0",
-    "gh-pages": "^6.3.0",
-    "lucide-react": "^0.554.0",
     "react": "^19.2.0",
-    "react-apexcharts": "^1.4.1",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "@google/genai": "^1.30.0",
+    "lucide-react": "^0.554.0",
+    "apexcharts": "^3.44.0",
+    "react-apexcharts": "^1.4.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
