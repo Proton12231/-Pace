@@ -16,28 +16,32 @@ export const analyzeStudyProgress = async (
 ): Promise<{ text: string }> => {
   try {
     const ai = getClient();
-    
+
     // Filter last 20 logs
     const recentLogs = logs.slice(0, 20);
 
     // Helper to format log string based on type
-    const logSummaries = recentLogs.map(l => {
-        let details = "";
-        if (l.vocabData) {
-            details = `Vocab: +${l.vocabData.learned}/-${l.vocabData.forgotten}`;
-        } else if (l.readingIntensiveData) {
-            details = `Reading: ${l.readingIntensiveData.articleTitle}, Unknown: ${l.readingIntensiveData.unknownWordCount}, Chunks: ${l.readingIntensiveData.chunkCount}`;
-        } else if (l.corpusData) {
-            details = `Corpus: Ch${l.corpusData.chapter}-${l.corpusData.section}, Round ${l.corpusData.round}, Acc: ${l.corpusData.accuracy}%`;
-        } else if (l.p2ListeningData) {
-            details = `Listen Type: ${l.p2ListeningData.questionType}, Acc: ${Math.round(l.p2ListeningData.correctCount/l.p2ListeningData.totalCount*100)}%`;
-        } else if (l.p2WritingData) {
-            details = `Writing: ${l.p2WritingData.taskType} (${l.p2WritingData.topicType}), Score: ${l.p2WritingData.score}`;
-        } else if (l.mockData) {
-            details = `Mock: ${l.mockData.book} ${l.mockData.test}, Overall: ${l.mockData.overallScore} (L${l.mockData.listeningScore} R${l.mockData.readingScore})`;
-        }
-        
-        return `${l.date}: ${details}`;
+    const logSummaries = recentLogs.map((l) => {
+      let details = "";
+      if (l.vocabData) {
+        details = `Vocab: +${l.vocabData.learned}/-${l.vocabData.forgotten}`;
+      } else if (l.readingIntensiveData) {
+        details = `Reading: ${l.readingIntensiveData.articleTitle}, Unknown: ${l.readingIntensiveData.unknownWordCount}, Chunks: ${l.readingIntensiveData.chunkCount}`;
+      } else if (l.corpusData) {
+        details = `Corpus: Ch${l.corpusData.chapter}-${l.corpusData.section}, Round ${l.corpusData.round}, Acc: ${l.corpusData.accuracy}%`;
+      } else if (l.p2ListeningData) {
+        details = `Listen Type: ${
+          l.p2ListeningData.questionType
+        }, Acc: ${Math.round(
+          (l.p2ListeningData.correctCount / l.p2ListeningData.totalCount) * 100
+        )}%`;
+      } else if (l.p2WritingData) {
+        details = `Writing: ${l.p2WritingData.taskType} (${l.p2WritingData.topicType}), Score: ${l.p2WritingData.score}`;
+      } else if (l.mockData) {
+        details = `Mock: ${l.mockData.book} ${l.mockData.test}, Overall: ${l.mockData.overallScore} (L${l.mockData.listeningScore} R${l.mockData.readingScore})`;
+      }
+
+      return `${l.date}: ${details}`;
     });
 
     const prompt = `
@@ -60,12 +64,12 @@ export const analyzeStudyProgress = async (
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         systemInstruction: "You are a professional IELTS coach.",
         temperature: 0.7,
-      }
+      },
     });
 
     return { text: response.text || "无法生成分析报告，请稍后再试。" };
